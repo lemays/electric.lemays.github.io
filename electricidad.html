@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Factura Eléctrica</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:#0f172a;
+    color:white;
+}
+.container{
+    max-width:900px;
+    margin:auto;
+    padding:30px;
+}
+.card{
+    background:#1e293b;
+    padding:20px;
+    border-radius:15px;
+    margin-bottom:20px;
+}
+h1{
+    text-align:center;
+}
+input,button{
+    padding:10px;
+    margin:5px 0;
+    width:100%;
+    border-radius:8px;
+    border:none;
+    font-size:16px;
+}
+button{
+    background:#2563eb;
+    color:white;
+    cursor:pointer;
+}
+button:hover{
+    background:#1d4ed8;
+}
+.grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+.resultado{
+    font-size:18px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>⚡ Dashboard Factura Eléctrica</h1>
+
+<div class="card">
+<label>Consumo total mensual (kWh)</label>
+<input type="number" id="consumo" placeholder="Ej: 301">
+
+<label>Watts del servidor 24/7 (opcional)</label>
+<input type="number" id="watts" placeholder="Ej: 100">
+
+<button onclick="calcular()">Calcular</button>
+</div>
+
+<div class="grid">
+<div class="card resultado" id="resultado"></div>
+<div class="card">
+<canvas id="grafico"></canvas>
+</div>
+</div>
+
+</div>
+
+<script>
+let chart;
+
+function calcular(){
+
+let consumo = parseFloat(document.getElementById("consumo").value);
+let watts = parseFloat(document.getElementById("watts").value);
+let cargoFijo = 126.81;
+
+if(isNaN(consumo) || consumo < 0){
+    alert("Ingrese un consumo válido");
+    return;
+}
+
+let kwh1 = Math.min(consumo,200);
+let kwh2 = Math.min(Math.max(consumo-200,0),100);
+let kwh3 = Math.max(consumo-300,0);
+
+let tramo1 = kwh1 * 5.97;
+let tramo2 = kwh2 * 8.51;
+let tramo3 = kwh3 * 13.83;
+
+let totalEnergia = tramo1 + tramo2 + tramo3;
+let total = totalEnergia + cargoFijo;
+
+let resultadoHTML = `
+<strong>Total a pagar: ${total.toFixed(2)} pesos</strong><br><br>
+Energía: ${totalEnergia.toFixed(2)}<br>
+Cargo fijo: ${cargoFijo}<br><br>
+Tramo 1 (0-200): ${tramo1.toFixed(2)}<br>
+Tramo 2 (201-300): ${tramo2.toFixed(2)}<br>
+Tramo 3 (301+): ${tramo3.toFixed(2)}<br>
+`;
+
+if(!isNaN(watts) && watts>0){
+    let consumoServidor = (watts/1000)*24*30;
+    let nuevoConsumo = consumo + consumoServidor;
+
+    let extraCosto = 0;
+
+    let extraKwh3 = Math.max(nuevoConsumo-300,0) - kwh3;
+    if(extraKwh3>0){
+        extraCosto += extraKwh3 * 13.83;
+    }
+
+    resultadoHTML += `<hr>
+    Servidor consume: ${consumoServidor.toFixed(2)} kWh/mes<br>
+    Costo adicional estimado: ${extraCosto.toFixed(2)} pesos`;
+}
+
+document.getElementById("resultado").innerHTML = resultadoHTML;
+
+if(chart) chart.destroy();
+
+chart = new Chart(document.getElementById("grafico"),{
+    type:"bar",
+    data:{
+        labels:["Tramo 1","Tramo 2","Tramo 3"],
+        datasets:[{
+            label:"Costo por tramo (pesos)",
+            data:[tramo1,tramo2,tramo3]
+        }]
+    },
+    options:{
+        responsive:true,
+        plugins:{
+            legend:{display:true}
+        }
+    }
+});
+
+}
+</script>
+
+</body>
+</html>
